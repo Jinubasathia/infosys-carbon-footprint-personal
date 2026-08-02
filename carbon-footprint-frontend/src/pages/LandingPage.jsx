@@ -19,7 +19,7 @@ const LandingPage = () => {
           
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-950/80 border border-emerald-800/60 text-emerald-400 text-xs font-semibold mb-8 shadow-inner animate-pulse">
             <Leaf className="w-4 h-4" />
-            <span>Enterprise Carbon Footprint Monitoring System • Infosys Internship</span>
+            <span>Enterprise Carbon Footprint Monitoring System</span>
           </div>
 
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight max-w-4xl mx-auto leading-tight mb-6">
@@ -74,7 +74,6 @@ const LandingPage = () => {
       <section id="about" className="py-20 bg-slate-950 border-y border-slate-800/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center mb-16">
-            <h2 className="text-xs font-bold text-emerald-400 uppercase tracking-widest mb-3">Problem Statement</h2>
             <h3 className="text-3xl sm:text-4xl font-extrabold text-white">Why Carbon Footprint Monitoring Matters</h3>
             <p className="mt-4 text-slate-400 text-sm sm:text-base leading-relaxed">
               Industrialization and high digital energy consumption contribute significantly to greenhouse gas emissions. Unmonitored carbon footprint leads to environmental degradation. EcoTrack solves this by providing verified account access and real-time environmental tracking.

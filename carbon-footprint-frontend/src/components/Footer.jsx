@@ -37,7 +37,7 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Technology Stack */}
+          {/* Technology Stack
           <div>
             <h4 className="text-white font-semibold mb-4 text-sm">Technology Stack</h4>
             <ul className="space-y-2 text-xs">
@@ -47,7 +47,7 @@ const Footer = () => {
               <li>React + Vite + Tailwind CSS</li>
               <li>Recharts & Lucide Icons</li>
             </ul>
-          </div>
+          </div> */}
 
           {/* Contact Information */}
           <div>

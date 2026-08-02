@@ -24,9 +24,6 @@ const Navbar = () => {
               <span className="font-extrabold text-lg bg-gradient-to-r from-white via-slate-200 to-emerald-400 bg-clip-text text-transparent">
                 EcoTrack
               </span>
-              <span className="hidden sm:inline-block ml-2 text-xs font-semibold px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/50">
-                Infosys Milestone 1
-              </span>
             </div>
           </Link>
 
