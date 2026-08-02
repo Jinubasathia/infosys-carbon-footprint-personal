@@ -15,7 +15,6 @@ public class GovernmentIdDto {
     @NotNull(message = "Government ID type is required")
     private IdType idType;
 
-    @NotBlank(message = "Government ID number is required")
     private String idNumber;
 
     private String documentUrl;

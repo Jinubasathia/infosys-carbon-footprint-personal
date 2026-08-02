@@ -46,7 +46,6 @@ public class EmailServiceImpl implements EmailService {
 
                 Best Regards,
                 Carbon Footprint Monitoring System Team
-                Infosys Internship Milestone 1 Project
                 """, fullName, username, temporaryPassword);
 
         // Always log credentials to console for local testing / development visibility
