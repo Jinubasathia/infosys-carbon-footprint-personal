@@ -163,16 +163,13 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
-        if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+        if (request.getOldPassword() != null && !request.getOldPassword().isBlank() &&
+                !passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
             throw new ValidationException("The current/temporary password entered is incorrect");
         }
 
         if (!request.getNewPassword().equals(request.getConfirmPassword())) {
             throw new ValidationException("New password and confirm password do not match");
-        }
-
-        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
-            throw new ValidationException("New password must be different from the temporary password");
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));

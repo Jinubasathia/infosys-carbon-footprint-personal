@@ -32,7 +32,7 @@ public class DataInitializer implements CommandLineRunner {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    @Value("${app.admin.email:admin@infosys.com}")
+    @Value("${spring.mail.username}")
     private String adminEmail;
 
     @Value("${app.admin.password:admin123}")
