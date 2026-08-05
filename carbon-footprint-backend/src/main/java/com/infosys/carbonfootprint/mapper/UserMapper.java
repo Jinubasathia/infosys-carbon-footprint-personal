@@ -46,7 +46,7 @@ public class UserMapper {
                 .firstLogin(user.isFirstLogin())
                 .address(toAddressDto(user.getAddress()))
                 .governmentId(toGovernmentIdDto(user.getGovernmentId()))
-                .roles(user.getRoles().stream().map(r -> r.getName().name()).collect(Collectors.toList()))
+                .roles(user.getRoles() != null ? user.getRoles().stream().map(r -> r.getName().name()).collect(Collectors.toList()) : java.util.Collections.emptyList())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();

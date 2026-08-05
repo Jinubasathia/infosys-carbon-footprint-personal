@@ -34,6 +34,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     long countByGender(Gender gender);
 
-    @Query("SELECT u FROM User u JOIN u.roles r WHERE r.name = 'ROLE_USER' ORDER BY u.createdAt DESC")
+    @Query("SELECT u FROM User u JOIN u.roles r WHERE r.name = com.infosys.carbonfootprint.entity.RoleType.ROLE_USER ORDER BY u.createdAt DESC")
     List<User> findAllRegisteredUsers();
 }

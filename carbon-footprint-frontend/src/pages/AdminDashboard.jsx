@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import UserDetailModal from '../components/UserDetailModal';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { Users, Clock, CheckCircle2, XCircle, RefreshCw, Eye, Check, X } from 'lucide-react';
+import { Users, Clock, CheckCircle2, XCircle, RefreshCw, Eye, Check, X, Layers, Activity } from 'lucide-react';
 
 const AdminDashboard = () => {
   const { showToast } = useAuth();
@@ -99,13 +100,27 @@ const AdminDashboard = () => {
               Review pending registrations, manage user accounts, and track system demographics
             </p>
           </div>
-          <button
-            onClick={fetchDashboardData}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition-all"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh Data
-          </button>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/admin/categories"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-all"
+            >
+              <Layers className="w-3.5 h-3.5 text-emerald-400" /> Categories
+            </Link>
+            <Link
+              to="/admin/activity-types"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs transition-all shadow-md shadow-emerald-900/30"
+            >
+              <Activity className="w-3.5 h-3.5" /> Activity Types
+            </Link>
+            <button
+              onClick={fetchDashboardData}
+              disabled={loading}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition-all"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh Data
+            </button>
+          </div>
         </div>
 
         {/* Dashboard Statistics Cards */}
