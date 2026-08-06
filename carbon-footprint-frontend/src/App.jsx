@@ -6,6 +6,8 @@ import UserLoginPage from './pages/UserLoginPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import AdminDashboard from './pages/AdminDashboard';
+import CategoryManagementPage from './pages/CategoryManagementPage';
+import ActivityTypeManagementPage from './pages/ActivityTypeManagementPage';
 import UserDashboard from './pages/UserDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -33,6 +35,24 @@ function App() {
         element={
           <ProtectedRoute requireAdmin={true}>
             <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/categories"
+        element={
+          <ProtectedRoute requireAdmin={true}>
+            <CategoryManagementPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/activity-types"
+        element={
+          <ProtectedRoute requireAdmin={true}>
+            <ActivityTypeManagementPage />
           </ProtectedRoute>
         }
       />

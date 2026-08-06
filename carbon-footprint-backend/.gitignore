@@ -23,6 +23,9 @@ spring-boot-*.jar
 application-local.properties
 application-prod.properties
 
+# Uploaded Files
+uploads/
+
 # Logs
 logs/
 *.log

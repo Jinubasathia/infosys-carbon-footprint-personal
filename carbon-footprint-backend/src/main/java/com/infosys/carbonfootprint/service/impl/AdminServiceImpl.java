@@ -133,12 +133,19 @@ public class AdminServiceImpl implements AdminService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
 
+        if (user.getStatus() == UserStatus.REJECTED) {
+            throw new ValidationException("User is already REJECTED");
+        }
+
         user.setStatus(UserStatus.REJECTED);
         User savedUser = userRepository.save(user);
 
-        String fullName = user.getFirstName() + " " + user.getLastName();
+        String first = user.getFirstName() != null ? user.getFirstName() : "";
+        String last = user.getLastName() != null ? user.getLastName() : "";
+        String fullName = (first + " " + last).trim();
         emailService.sendRejectionEmail(user.getEmail(), fullName, remark);
 
         return userMapper.toDetailDto(savedUser);
     }
 }
+
