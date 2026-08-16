@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import {
   User, Leaf, ShieldCheck, Zap, Car, Recycle, Award,
-  LayoutDashboard, LogOut, AlertTriangle, Settings, FileText
+  LayoutDashboard, LogOut, AlertTriangle, Settings, FileText, Activity
 } from 'lucide-react';
 
 const UserDashboard = () => {
@@ -34,6 +34,7 @@ const UserDashboard = () => {
   const sidebarItems = [
     { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { key: 'profile', label: 'My Profile', icon: User },
+    { key: 'activities', label: 'Activity Log', icon: Activity },
     { key: 'reports', label: 'Reports', icon: FileText },
     { key: 'settings', label: 'Settings', icon: Settings },
   ];
@@ -42,7 +43,7 @@ const UserDashboard = () => {
     <div className="min-h-screen bg-slate-900 text-slate-100 flex">
 
       {/* Sidebar */}
-      <aside className="w-56 shrink-0 bg-slate-950 border-r border-slate-800 flex flex-col min-h-screen sticky top-0">
+      <aside className="hidden w-56 shrink-0 bg-slate-950 border-r border-slate-800 flex-col min-h-screen sticky top-0">
         {/* Brand */}
         <div className="px-5 py-5 border-b border-slate-800 flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center">
@@ -100,9 +101,9 @@ const UserDashboard = () => {
       <div className="flex-1 flex flex-col min-h-screen">
 
         {/* Top Bar */}
-        <header className="h-14 bg-slate-900/80 border-b border-slate-800 flex items-center justify-between px-6 sticky top-0 z-30 backdrop-blur-md">
+        <header className="hidden h-14 bg-slate-900/80 border-b border-slate-800 items-center justify-between px-6 sticky top-0 z-30 backdrop-blur-md">
           <h2 className="text-sm font-bold text-white">
-            {sidebarItems.find((s) => s.key === activePage)?.label || 'Dashboard'}
+            {activePage === 'activities' ? 'Activity Logging' : sidebarItems.find((s) => s.key === activePage)?.label || 'Dashboard'}
           </h2>
           <span className="px-3 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 text-xs font-bold flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5" /> Verified
@@ -217,6 +218,24 @@ const UserDashboard = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* ── ACTIVITY LOG PAGE ── */}
+          {activePage === 'activities' && (
+            <div className="glass-card p-6 rounded-2xl border border-slate-800 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-bold text-white">Activity Logging</h3>
+                <Link
+                  to="/user/activities"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold transition-all"
+                >
+                  <Activity className="w-4 h-4" /> Log Activities
+                </Link>
+              </div>
+              <p className="text-xs text-slate-400">
+                Record your daily activities to track your carbon footprint. Select a category, activity type, enter quantity, and save.
+              </p>
             </div>
           )}
 
