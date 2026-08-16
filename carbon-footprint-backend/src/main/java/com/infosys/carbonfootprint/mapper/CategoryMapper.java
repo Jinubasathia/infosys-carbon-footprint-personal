@@ -25,7 +25,7 @@ public class CategoryMapper {
     public CategoryResponseDto toDto(Category entity) {
         if (entity == null) return null;
         return CategoryResponseDto.builder()
-                .id(entity.getId())
+                .id(entity.getCategoryId())
                 .categoryCode(entity.getCategoryCode())
                 .categoryName(entity.getCategoryName())
                 .description(entity.getDescription())

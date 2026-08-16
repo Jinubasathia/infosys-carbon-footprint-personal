@@ -86,9 +86,12 @@ public class SecurityConfig {
                         auth.requestMatchers("/api/v1/auth/**").permitAll()
                                 .requestMatchers("/api/v1/public/**").permitAll()
                                 .requestMatchers("/uploads/**").permitAll()
+                                .requestMatchers("/api/v1/admin/categories/**").hasAuthority("ROLE_ADMIN")
+                                .requestMatchers("/api/v1/admin/activity-types/**").hasAuthority("ROLE_ADMIN")
+                                .requestMatchers("/api/v1/admin/emission-factors/**").hasAuthority("ROLE_ADMIN")
+                                .requestMatchers("/api/v1/user/data/**").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                                .requestMatchers("/api/v1/user/activities/**").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
                                 .requestMatchers("/error").permitAll()
-                                .requestMatchers("/api/v1/admin/**").hasAuthority("ROLE_ADMIN")
-                                .requestMatchers("/api/v1/user/**").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
                                 .anyRequest().authenticated()
                 );
 

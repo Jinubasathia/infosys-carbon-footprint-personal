@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import UserDetailModal from '../components/UserDetailModal';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
@@ -7,7 +7,7 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveCo
 import {
   Users, Clock, CheckCircle2, XCircle, RefreshCw, Eye, Check, X,
   LayoutDashboard, LogOut, ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
-  Leaf, AlertTriangle, Shield
+  Leaf, AlertTriangle, Shield, Layers, Activity, Fuel
 } from 'lucide-react';
 
 const ROWS_PER_PAGE = 8;
@@ -15,10 +15,11 @@ const ROWS_PER_PAGE = 8;
 const AdminDashboard = () => {
   const { showToast, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [activeTab, setActiveTab] = useState('ALL');
-  const [activePage, setActivePage] = useState('dashboard');
+  const [activePage, setActivePage] = useState(location.pathname.endsWith('/users') ? 'users' : 'dashboard');
   const [loading, setLoading] = useState(true);
   const [detailModalUser, setDetailModalUser] = useState(null);
   const [rejectRemark, setRejectRemark] = useState('');
@@ -49,8 +50,10 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => { fetchDashboardData(); }, []);
+  useEffect(() => { setActivePage(location.pathname.endsWith('/users') ? 'users' : 'dashboard'); }, [location.pathname]);
 
   const handleApprove = async (id) => {
+    if (!window.confirm('Approve this user and issue their login credentials?')) return;
     try {
       const res = await api.post(`/admin/users/${id}/approve`);
       showToast(res.message || 'User approved!', 'success');
@@ -113,13 +116,16 @@ const AdminDashboard = () => {
   const sidebarItems = [
     { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { key: 'users', label: 'User Management', icon: Users },
+    { key: 'categories', label: 'Categories', icon: Layers },
+    { key: 'activityTypes', label: 'Activity Types', icon: Activity },
+    { key: 'emissionFactors', label: 'Emission Factors', icon: Fuel },
   ];
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex">
 
       {/* Sidebar */}
-      <aside className="w-56 shrink-0 bg-slate-950 border-r border-slate-800 flex flex-col min-h-screen sticky top-0">
+      <aside className="hidden w-56 shrink-0 bg-slate-950 border-r border-slate-800 flex-col min-h-screen sticky top-0">
         {/* Brand */}
         <div className="px-5 py-5 border-b border-slate-800 flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center">
@@ -172,9 +178,9 @@ const AdminDashboard = () => {
       <div className="flex-1 flex flex-col min-h-screen">
 
         {/* Top Bar */}
-        <header className="h-14 bg-slate-900/80 border-b border-slate-800 flex items-center justify-between px-6 sticky top-0 z-30 backdrop-blur-md">
+        <header className="hidden h-14 bg-slate-900/80 border-b border-slate-800 items-center justify-between px-6 sticky top-0 z-30 backdrop-blur-md">
           <h2 className="text-sm font-bold text-white">
-            {activePage === 'dashboard' ? 'Admin Management Dashboard' : 'User Management'}
+            {activePage === 'dashboard' ? 'Admin Management Dashboard' : activePage === 'users' ? 'User Management' : activePage === 'categories' ? 'Category Management' : activePage === 'activityTypes' ? 'Activity Type Management' : 'Emission Factor Management'}
           </h2>
           <button
             onClick={fetchDashboardData}
@@ -291,6 +297,60 @@ const AdminDashboard = () => {
                 </div>
               )}
             </>
+          )}
+
+          {/* ── CATEGORY MANAGEMENT PAGE ── */}
+          {activePage === 'categories' && (
+            <div className="glass-card p-6 rounded-2xl border border-slate-800 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-bold text-white">Category Management</h3>
+                <Link
+                  to="/admin/categories"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold transition-all"
+                >
+                  <Layers className="w-4 h-4" /> Manage Categories
+                </Link>
+              </div>
+              <p className="text-xs text-slate-400">
+                Create and manage top-level emission activity categories (Transport, Electricity, Food, Shopping).
+              </p>
+            </div>
+          )}
+
+          {/* ── ACTIVITY TYPE MANAGEMENT PAGE ── */}
+          {activePage === 'activityTypes' && (
+            <div className="glass-card p-6 rounded-2xl border border-slate-800 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-bold text-white">Activity Type Management</h3>
+                <Link
+                  to="/admin/activity-types"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold transition-all"
+                >
+                  <Activity className="w-4 h-4" /> Manage Activity Types
+                </Link>
+              </div>
+              <p className="text-xs text-slate-400">
+                Define sub-activities under each category with units and quantity ranges.
+              </p>
+            </div>
+          )}
+
+          {/* ── EMISSION FACTOR MANAGEMENT PAGE ── */}
+          {activePage === 'emissionFactors' && (
+            <div className="glass-card p-6 rounded-2xl border border-slate-800 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-bold text-white">Emission Factor Management</h3>
+                <Link
+                  to="/admin/emission-factors"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold transition-all"
+                >
+                  <Fuel className="w-4 h-4" /> Manage Emission Factors
+                </Link>
+              </div>
+              <p className="text-xs text-slate-400">
+                Configure emission factors for each activity type to enable carbon calculations.
+              </p>
+            </div>
           )}
 
           {/* ── USER MANAGEMENT PAGE ── */}

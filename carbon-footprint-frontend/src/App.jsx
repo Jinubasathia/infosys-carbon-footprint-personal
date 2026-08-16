@@ -6,8 +6,13 @@ import UserLoginPage from './pages/UserLoginPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminShell from './components/AdminShell';
+import UserShell from './components/UserShell';
+import AdminActivityLogsPage from './pages/AdminActivityLogsPage';
 import CategoryManagementPage from './pages/CategoryManagementPage';
 import ActivityTypeManagementPage from './pages/ActivityTypeManagementPage';
+import EmissionFactorManagementPage from './pages/EmissionFactorManagementPage';
+import ActivityLoggingPage from './pages/ActivityLoggingPage';
 import UserDashboard from './pages/UserDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -30,41 +35,20 @@ function App() {
         }
       />
 
-      <Route
-        path="/admin/dashboard"
-        element={
-          <ProtectedRoute requireAdmin={true}>
-            <AdminDashboard />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/admin" element={<ProtectedRoute requireAdmin={true}><AdminShell /></ProtectedRoute>}>
+        <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="users" element={<AdminDashboard />} />
+        <Route path="categories" element={<CategoryManagementPage />} />
+        <Route path="activity-types" element={<ActivityTypeManagementPage />} />
+        <Route path="emission-factors" element={<EmissionFactorManagementPage />} />
+        <Route path="activity-logs" element={<AdminActivityLogsPage />} />
+      </Route>
 
-      <Route
-        path="/admin/categories"
-        element={
-          <ProtectedRoute requireAdmin={true}>
-            <CategoryManagementPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/admin/activity-types"
-        element={
-          <ProtectedRoute requireAdmin={true}>
-            <ActivityTypeManagementPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/user/dashboard"
-        element={
-          <ProtectedRoute>
-            <UserDashboard />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/user" element={<ProtectedRoute><UserShell /></ProtectedRoute>}>
+        <Route path="dashboard" element={<UserDashboard />} />
+        <Route path="activities" element={<ActivityLoggingPage />} />
+        <Route path="history" element={<ActivityLoggingPage />} />
+      </Route>
 
       {/* Catch-all fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />

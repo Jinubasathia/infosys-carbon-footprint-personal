@@ -1,13 +1,11 @@
 package com.infosys.carbonfootprint.service.impl;
 
-import com.infosys.carbonfootprint.dto.ActivityTypeRequestDto;
-import com.infosys.carbonfootprint.dto.ActivityTypeResponseDto;
+import com.infosys.carbonfootprint.dto.ActivityTypeDto;
 import com.infosys.carbonfootprint.entity.ActivityType;
 import com.infosys.carbonfootprint.entity.Category;
 import com.infosys.carbonfootprint.entity.CategoryStatus;
 import com.infosys.carbonfootprint.exception.ResourceNotFoundException;
 import com.infosys.carbonfootprint.exception.ValidationException;
-import com.infosys.carbonfootprint.mapper.ActivityTypeMapper;
 import com.infosys.carbonfootprint.repository.ActivityTypeRepository;
 import com.infosys.carbonfootprint.repository.CategoryRepository;
 import com.infosys.carbonfootprint.service.ActivityTypeService;
@@ -17,175 +15,168 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.Locale;
 
 @Service
 public class ActivityTypeServiceImpl implements ActivityTypeService {
 
-    @Autowired
-    private ActivityTypeRepository activityTypeRepository;
-
-    @Autowired
-    private CategoryRepository categoryRepository;
-
-    @Autowired
-    private ActivityTypeMapper activityTypeMapper;
+    @Autowired private ActivityTypeRepository activityTypeRepository;
+    @Autowired private CategoryRepository categoryRepository;
 
     @Override
     @Transactional
-    public ActivityTypeResponseDto createActivityType(ActivityTypeRequestDto dto, String currentUsername) {
-        if (dto.getCategoryId() == null) {
-            throw new ValidationException("Category is mandatory");
-        }
-
+    public ActivityTypeDto create(ActivityTypeDto dto, String createdBy) {
         Category category = categoryRepository.findById(dto.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", dto.getCategoryId()));
 
-        String activityName = dto.getActivityName() != null ? dto.getActivityName().trim() : "";
-        if (activityName.isEmpty()) {
-            throw new ValidationException("Activity Name is mandatory");
-        }
+        String activityCode = resolveActivityCode(dto.getActivityCode(), category, dto.getActivityName(), null);
+        if (activityTypeRepository.existsByActivityCodeIgnoreCase(activityCode))
+            throw new ValidationException("Activity code '" + activityCode + "' already exists");
+        if (activityTypeRepository.existsByActivityNameIgnoreCaseAndCategoryCategoryId(dto.getActivityName(), dto.getCategoryId()))
+            throw new ValidationException("Activity '" + dto.getActivityName() + "' already exists in this category");
 
-        if (activityTypeRepository.existsByCategoryIdAndActivityNameIgnoreCase(category.getId(), activityName)) {
-            throw new ValidationException("Activity Name '" + activityName + "' already exists under category '" + category.getCategoryName() + "'");
-        }
+        validateQuantities(dto);
 
-        String unit = dto.getUnit() != null ? dto.getUnit().trim() : "";
-        if (unit.isEmpty()) {
-            throw new ValidationException("Unit is mandatory");
-        }
+        ActivityType at = ActivityType.builder()
+                .category(category)
+                .activityCode(activityCode)
+                .activityName(dto.getActivityName().trim())
+                .description(dto.getDescription())
+                .unit(dto.getUnit())
+                .minQuantity(dto.getMinQuantity())
+                .maxQuantity(dto.getMaxQuantity())
+                .defaultQuantity(dto.getDefaultQuantity())
+                .displayOrder(dto.getDisplayOrder())
+                .icon(dto.getIcon())
+                .status(dto.getStatus() != null ? dto.getStatus() : CategoryStatus.ACTIVE)
+                .remarks(dto.getRemarks())
+                .createdBy(createdBy)
+                .build();
 
-        String activityCode = dto.getActivityCode() != null ? dto.getActivityCode().trim().toUpperCase() : "";
-        if (activityCode.isEmpty()) {
-            activityCode = generateActivityCode(category.getCategoryCode(), activityName);
-        }
+        return toDto(activityTypeRepository.save(at));
+    }
 
-        if (activityTypeRepository.existsByActivityCodeIgnoreCase(activityCode)) {
-            throw new ValidationException("Activity Code '" + activityCode + "' already exists");
-        }
+    @Override
+    @Transactional(readOnly = true)
+    public List<ActivityTypeDto> getAll() {
+        return activityTypeRepository.findAllByOrderByDisplayOrderAscActivityNameAsc()
+                .stream().map(this::toDto).collect(Collectors.toList());
+    }
 
-        ActivityType activityType = activityTypeMapper.toEntity(dto, category);
-        activityType.setActivityName(activityName);
-        activityType.setActivityCode(activityCode);
-        activityType.setUnit(unit);
-        activityType.setCreatedBy(currentUsername);
-        activityType.setUpdatedBy(currentUsername);
+    @Override
+    @Transactional(readOnly = true)
+    public List<ActivityTypeDto> getByCategory(Long categoryId) {
+        return activityTypeRepository.findByCategoryCategoryIdOrderByDisplayOrderAscActivityNameAsc(categoryId)
+                .stream().map(this::toDto).collect(Collectors.toList());
+    }
 
-        ActivityType saved = activityTypeRepository.save(activityType);
-        return activityTypeMapper.toDto(saved);
+    @Override
+    @Transactional(readOnly = true)
+    public List<ActivityTypeDto> getActiveByCategoryId(Long categoryId) {
+        return activityTypeRepository.findByCategoryCategoryIdAndStatus(categoryId, CategoryStatus.ACTIVE)
+                .stream().map(this::toDto).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ActivityTypeDto getById(Long id) {
+        return toDto(findOrThrow(id));
     }
 
     @Override
     @Transactional
-    public ActivityTypeResponseDto updateActivityType(Long id, ActivityTypeRequestDto dto, String currentUsername) {
-        ActivityType activityType = activityTypeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("ActivityType", "id", id));
-
-        if (dto.getCategoryId() == null) {
-            throw new ValidationException("Category is mandatory");
-        }
-
+    public ActivityTypeDto update(Long id, ActivityTypeDto dto, String updatedBy) {
+        ActivityType at = findOrThrow(id);
         Category category = categoryRepository.findById(dto.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", dto.getCategoryId()));
 
-        String activityName = dto.getActivityName() != null ? dto.getActivityName().trim() : "";
-        if (activityName.isEmpty()) {
-            throw new ValidationException("Activity Name is mandatory");
-        }
+        String activityCode = resolveActivityCode(dto.getActivityCode(), category, dto.getActivityName(), at.getActivityCode());
+        if (activityTypeRepository.existsByActivityCodeIgnoreCaseAndActivityTypeIdNot(activityCode, id))
+            throw new ValidationException("Activity code '" + activityCode + "' already exists");
+        if (activityTypeRepository.existsByActivityNameIgnoreCaseAndCategoryCategoryIdAndActivityTypeIdNot(dto.getActivityName(), dto.getCategoryId(), id))
+            throw new ValidationException("Activity '" + dto.getActivityName() + "' already exists in this category");
 
-        if (activityTypeRepository.existsByCategoryIdAndActivityNameIgnoreCaseAndIdNot(category.getId(), activityName, id)) {
-            throw new ValidationException("Activity Name '" + activityName + "' already exists under category '" + category.getCategoryName() + "'");
-        }
+        validateQuantities(dto);
 
-        String unit = dto.getUnit() != null ? dto.getUnit().trim() : "";
-        if (unit.isEmpty()) {
-            throw new ValidationException("Unit is mandatory");
-        }
+        at.setCategory(category);
+        at.setActivityCode(activityCode);
+        at.setActivityName(dto.getActivityName().trim());
+        at.setDescription(dto.getDescription());
+        at.setUnit(dto.getUnit());
+        at.setMinQuantity(dto.getMinQuantity());
+        at.setMaxQuantity(dto.getMaxQuantity());
+        at.setDefaultQuantity(dto.getDefaultQuantity());
+        at.setDisplayOrder(dto.getDisplayOrder());
+        at.setIcon(dto.getIcon());
+        at.setStatus(dto.getStatus());
+        at.setRemarks(dto.getRemarks());
+        at.setUpdatedBy(updatedBy);
 
-        String activityCode = dto.getActivityCode() != null ? dto.getActivityCode().trim().toUpperCase() : activityType.getActivityCode();
-        if (activityTypeRepository.existsByActivityCodeIgnoreCaseAndIdNot(activityCode, id)) {
-            throw new ValidationException("Activity Code '" + activityCode + "' is already used by another activity type");
-        }
-
-        activityType.setCategory(category);
-        activityType.setActivityCode(activityCode);
-        activityType.setActivityName(activityName);
-        activityType.setUnit(unit);
-        activityType.setDescription(dto.getDescription() != null ? dto.getDescription().trim() : activityType.getDescription());
-        activityType.setMinQuantity(dto.getMinQuantity() != null ? dto.getMinQuantity() : activityType.getMinQuantity());
-        activityType.setMaxQuantity(dto.getMaxQuantity() != null ? dto.getMaxQuantity() : activityType.getMaxQuantity());
-        activityType.setDefaultQuantity(dto.getDefaultQuantity() != null ? dto.getDefaultQuantity() : activityType.getDefaultQuantity());
-        activityType.setDisplayOrder(dto.getDisplayOrder() != null ? dto.getDisplayOrder() : activityType.getDisplayOrder());
-        activityType.setIcon(dto.getIcon() != null ? dto.getIcon() : activityType.getIcon());
-        if (dto.getStatus() != null) {
-            activityType.setStatus(dto.getStatus());
-        }
-        activityType.setRemarks(dto.getRemarks() != null ? dto.getRemarks().trim() : activityType.getRemarks());
-        activityType.setUpdatedBy(currentUsername);
-
-        ActivityType updated = activityTypeRepository.save(activityType);
-        return activityTypeMapper.toDto(updated);
+        return toDto(activityTypeRepository.save(at));
     }
 
     @Override
     @Transactional
-    public void deleteActivityType(Long id) {
-        ActivityType activityType = activityTypeRepository.findById(id)
+    public void delete(Long id) {
+        ActivityType at = findOrThrow(id);
+        if (!at.getEmissionFactors().isEmpty())
+            throw new ValidationException("Cannot delete activity type with existing emission factors.");
+        activityTypeRepository.delete(at);
+    }
+
+    private void validateQuantities(ActivityTypeDto dto) {
+        if (dto.getMinQuantity() != null && dto.getMaxQuantity() != null
+                && dto.getMinQuantity() > dto.getMaxQuantity())
+            throw new ValidationException("Min quantity cannot be greater than max quantity");
+        if (dto.getDefaultQuantity() != null && dto.getMinQuantity() != null
+                && dto.getDefaultQuantity() < dto.getMinQuantity())
+            throw new ValidationException("Default quantity cannot be less than min quantity");
+        if (dto.getDefaultQuantity() != null && dto.getMaxQuantity() != null
+                && dto.getDefaultQuantity() > dto.getMaxQuantity())
+            throw new ValidationException("Default quantity cannot be greater than max quantity");
+    }
+
+    private ActivityType findOrThrow(Long id) {
+        return activityTypeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("ActivityType", "id", id));
-        activityTypeRepository.delete(activityType);
     }
 
-    @Override
-    @Transactional
-    public ActivityTypeResponseDto toggleActivityTypeStatus(Long id, String currentUsername) {
-        ActivityType activityType = activityTypeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("ActivityType", "id", id));
+    private String resolveActivityCode(String requestedCode, Category category, String activityName, String existingCode) {
+        if (requestedCode != null && !requestedCode.trim().isEmpty()) return requestedCode.trim().toUpperCase(Locale.ROOT);
+        if (existingCode != null && !existingCode.isBlank()) return existingCode;
 
-        if (activityType.getStatus() == CategoryStatus.ACTIVE) {
-            activityType.setStatus(CategoryStatus.INACTIVE);
-        } else {
-            activityType.setStatus(CategoryStatus.ACTIVE);
+        String categoryPart = category.getCategoryCode().replaceAll("[^A-Za-z0-9]", "").toUpperCase(Locale.ROOT);
+        String namePart = activityName.replaceAll("[^A-Za-z0-9]+", "_").replaceAll("^_+|_+$", "").toUpperCase(Locale.ROOT);
+        String base = (categoryPart + "_" + namePart).substring(0, Math.min(20, categoryPart.length() + 1 + namePart.length()));
+        String candidate = base;
+        int suffix = 2;
+        while (activityTypeRepository.existsByActivityCodeIgnoreCase(candidate)) {
+            String tail = "_" + suffix++;
+            candidate = base.substring(0, Math.min(base.length(), 20 - tail.length())) + tail;
         }
-        activityType.setUpdatedBy(currentUsername);
-
-        ActivityType saved = activityTypeRepository.save(activityType);
-        return activityTypeMapper.toDto(saved);
+        return candidate;
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<ActivityTypeResponseDto> getAllActivityTypes(Long categoryId) {
-        List<ActivityType> list;
-        if (categoryId != null && categoryId > 0) {
-            list = activityTypeRepository.findByCategoryIdOrderByDisplayOrderAscActivityNameAsc(categoryId);
-        } else {
-            list = activityTypeRepository.findAllByOrderByDisplayOrderAscActivityNameAsc();
-        }
-        return list.stream().map(activityTypeMapper::toDto).collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ActivityTypeResponseDto> getActiveActivityTypes(Long categoryId) {
-        List<ActivityType> list;
-        if (categoryId != null && categoryId > 0) {
-            list = activityTypeRepository.findByCategoryIdAndStatusOrderByDisplayOrderAscActivityNameAsc(categoryId, CategoryStatus.ACTIVE);
-        } else {
-            list = activityTypeRepository.findByStatusOrderByDisplayOrderAscActivityNameAsc(CategoryStatus.ACTIVE);
-        }
-        return list.stream().map(activityTypeMapper::toDto).collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public ActivityTypeResponseDto getActivityTypeById(Long id) {
-        ActivityType activityType = activityTypeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("ActivityType", "id", id));
-        return activityTypeMapper.toDto(activityType);
-    }
-
-    private String generateActivityCode(String catCode, String name) {
-        String cleanName = name.replaceAll("[^a-zA-Z0-9]", "").toUpperCase();
-        String sub = cleanName.length() >= 4 ? cleanName.substring(0, 4) : String.format("%-4s", cleanName).replace(' ', 'X');
-        return catCode + "_" + sub;
+    ActivityTypeDto toDto(ActivityType at) {
+        return ActivityTypeDto.builder()
+                .activityTypeId(at.getActivityTypeId())
+                .categoryId(at.getCategory().getCategoryId())
+                .categoryName(at.getCategory().getCategoryName())
+                .activityCode(at.getActivityCode())
+                .activityName(at.getActivityName())
+                .description(at.getDescription())
+                .unit(at.getUnit())
+                .minQuantity(at.getMinQuantity())
+                .maxQuantity(at.getMaxQuantity())
+                .defaultQuantity(at.getDefaultQuantity())
+                .displayOrder(at.getDisplayOrder())
+                .icon(at.getIcon())
+                .status(at.getStatus())
+                .remarks(at.getRemarks())
+                .createdBy(at.getCreatedBy())
+                .updatedBy(at.getUpdatedBy())
+                .createdAt(at.getCreatedAt())
+                .updatedAt(at.getUpdatedAt())
+                .build();
     }
 }

@@ -1,12 +1,10 @@
 package com.infosys.carbonfootprint.service.impl;
 
-import com.infosys.carbonfootprint.dto.CategoryRequestDto;
-import com.infosys.carbonfootprint.dto.CategoryResponseDto;
+import com.infosys.carbonfootprint.dto.CategoryDto;
 import com.infosys.carbonfootprint.entity.Category;
 import com.infosys.carbonfootprint.entity.CategoryStatus;
 import com.infosys.carbonfootprint.exception.ResourceNotFoundException;
 import com.infosys.carbonfootprint.exception.ValidationException;
-import com.infosys.carbonfootprint.mapper.CategoryMapper;
 import com.infosys.carbonfootprint.repository.CategoryRepository;
 import com.infosys.carbonfootprint.service.CategoryService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,135 +20,119 @@ public class CategoryServiceImpl implements CategoryService {
     @Autowired
     private CategoryRepository categoryRepository;
 
-    @Autowired
-    private CategoryMapper categoryMapper;
-
     @Override
     @Transactional
-    public CategoryResponseDto createCategory(CategoryRequestDto dto, String currentUsername) {
-        String categoryName = dto.getCategoryName() != null ? dto.getCategoryName().trim() : "";
-        if (categoryName.isEmpty()) {
-            throw new ValidationException("Category Name cannot be empty");
-        }
+    public CategoryDto create(CategoryDto dto, String createdBy) {
+        if (categoryRepository.existsByCategoryNameIgnoreCase(dto.getCategoryName()))
+            throw new ValidationException("Category name '" + dto.getCategoryName() + "' already exists");
+        if (categoryRepository.existsByCategoryCodeIgnoreCase(dto.getCategoryCode()))
+            throw new ValidationException("Category code '" + dto.getCategoryCode() + "' already exists");
 
-        if (categoryRepository.existsByCategoryNameIgnoreCase(categoryName)) {
-            throw new ValidationException("Category Name must be unique. '" + categoryName + "' already exists.");
-        }
+        Category category = Category.builder()
+                .categoryCode(dto.getCategoryCode().toUpperCase())
+                .categoryName(dto.getCategoryName())
+                .description(dto.getDescription())
+                .icon(dto.getIcon())
+                .colorCode(dto.getColorCode())
+                .displayOrder(dto.getDisplayOrder())
+                .status(dto.getStatus() != null ? dto.getStatus() : CategoryStatus.ACTIVE)
+                .remarks(dto.getRemarks())
+                .createdBy(createdBy)
+                .build();
 
-        String categoryCode = dto.getCategoryCode() != null ? dto.getCategoryCode().trim().toUpperCase() : "";
-        if (categoryCode.isEmpty()) {
-            categoryCode = generateCategoryCode(categoryName);
-        }
+        return toDto(categoryRepository.save(category));
+    }
 
-        if (categoryRepository.existsByCategoryCodeIgnoreCase(categoryCode)) {
-            throw new ValidationException("Category Code must be unique. '" + categoryCode + "' already exists.");
-        }
+    @Override
+    @Transactional(readOnly = true)
+    public List<CategoryDto> getAll() {
+        return categoryRepository.findAllByOrderByDisplayOrderAscCategoryNameAsc()
+                .stream().map(this::toDto).collect(Collectors.toList());
+    }
 
-        Category category = categoryMapper.toEntity(dto);
-        category.setCategoryName(categoryName);
-        category.setCategoryCode(categoryCode);
-        category.setCreatedBy(currentUsername);
-        category.setUpdatedBy(currentUsername);
-
-        Category saved = categoryRepository.save(category);
-        return categoryMapper.toDto(saved);
+    @Override
+    @Transactional(readOnly = true)
+    public CategoryDto getById(Long id) {
+        return toDto(findOrThrow(id));
     }
 
     @Override
     @Transactional
-    public CategoryResponseDto updateCategory(Long id, CategoryRequestDto dto, String currentUsername) {
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Category", "id", id));
+    public CategoryDto update(Long id, CategoryDto dto, String updatedBy) {
+        Category category = findOrThrow(id);
 
-        String categoryName = dto.getCategoryName() != null ? dto.getCategoryName().trim() : "";
-        if (categoryName.isEmpty()) {
-            throw new ValidationException("Category Name cannot be empty");
-        }
+        if (categoryRepository.existsByCategoryNameIgnoreCaseAndCategoryIdNot(dto.getCategoryName(), id))
+            throw new ValidationException("Category name '" + dto.getCategoryName() + "' already exists");
+        if (categoryRepository.existsByCategoryCodeIgnoreCaseAndCategoryIdNot(dto.getCategoryCode(), id))
+            throw new ValidationException("Category code '" + dto.getCategoryCode() + "' already exists");
 
-        if (categoryRepository.existsByCategoryNameIgnoreCaseAndIdNot(categoryName, id)) {
-            throw new ValidationException("Category Name must be unique. '" + categoryName + "' is already used by another category.");
-        }
+        category.setCategoryCode(dto.getCategoryCode().toUpperCase());
+        category.setCategoryName(dto.getCategoryName());
+        category.setDescription(dto.getDescription());
+        category.setIcon(dto.getIcon());
+        category.setColorCode(dto.getColorCode());
+        category.setDisplayOrder(dto.getDisplayOrder());
+        category.setStatus(dto.getStatus());
+        category.setRemarks(dto.getRemarks());
+        category.setUpdatedBy(updatedBy);
 
-        String categoryCode = dto.getCategoryCode() != null ? dto.getCategoryCode().trim().toUpperCase() : category.getCategoryCode();
-        if (categoryRepository.existsByCategoryCodeIgnoreCaseAndIdNot(categoryCode, id)) {
-            throw new ValidationException("Category Code must be unique. '" + categoryCode + "' is already used by another category.");
-        }
-
-        category.setCategoryName(categoryName);
-        category.setCategoryCode(categoryCode);
-        category.setDescription(dto.getDescription() != null ? dto.getDescription().trim() : category.getDescription());
-        category.setIcon(dto.getIcon() != null ? dto.getIcon() : category.getIcon());
-        category.setColorCode(dto.getColorCode() != null ? dto.getColorCode() : category.getColorCode());
-        category.setDisplayOrder(dto.getDisplayOrder() != null ? dto.getDisplayOrder() : category.getDisplayOrder());
-        if (dto.getStatus() != null) {
-            category.setStatus(dto.getStatus());
-        }
-        category.setRemarks(dto.getRemarks() != null ? dto.getRemarks().trim() : category.getRemarks());
-        category.setUpdatedBy(currentUsername);
-
-        Category updated = categoryRepository.save(category);
-        return categoryMapper.toDto(updated);
+        return toDto(categoryRepository.save(category));
     }
 
     @Override
     @Transactional
-    public void deleteCategory(Long id) {
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Category", "id", id));
-
+    public void delete(Long id) {
+        Category category = findOrThrow(id);
+        if (!category.getActivityTypes().isEmpty())
+            throw new ValidationException("Cannot delete category with existing activity types. Deactivate it instead.");
         categoryRepository.delete(category);
     }
 
     @Override
     @Transactional
-    public CategoryResponseDto toggleCategoryStatus(Long id, String currentUsername) {
-        Category category = categoryRepository.findById(id)
+    public CategoryDto activate(Long id, String updatedBy) {
+        Category category = findOrThrow(id);
+        category.setStatus(CategoryStatus.ACTIVE);
+        category.setUpdatedBy(updatedBy);
+        return toDto(categoryRepository.save(category));
+    }
+
+    @Override
+    @Transactional
+    public CategoryDto deactivate(Long id, String updatedBy) {
+        Category category = findOrThrow(id);
+        category.setStatus(CategoryStatus.INACTIVE);
+        category.setUpdatedBy(updatedBy);
+        return toDto(categoryRepository.save(category));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CategoryDto> getActiveCategories() {
+        return categoryRepository.findByStatus(CategoryStatus.ACTIVE)
+                .stream().map(this::toDto).collect(Collectors.toList());
+    }
+
+    private Category findOrThrow(Long id) {
+        return categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", id));
-
-        if (category.getStatus() == CategoryStatus.ACTIVE) {
-            category.setStatus(CategoryStatus.INACTIVE);
-        } else {
-            category.setStatus(CategoryStatus.ACTIVE);
-        }
-        category.setUpdatedBy(currentUsername);
-
-        Category saved = categoryRepository.save(category);
-        return categoryMapper.toDto(saved);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<CategoryResponseDto> getAllCategories() {
-        return categoryRepository.findAllByOrderByDisplayOrderAscCategoryNameAsc()
-                .stream()
-                .map(categoryMapper::toDto)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<CategoryResponseDto> getActiveCategories() {
-        return categoryRepository.findByStatusOrderByDisplayOrderAscCategoryNameAsc(CategoryStatus.ACTIVE)
-                .stream()
-                .map(categoryMapper::toDto)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public CategoryResponseDto getCategoryById(Long id) {
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Category", "id", id));
-        return categoryMapper.toDto(category);
-    }
-
-    private String generateCategoryCode(String name) {
-        String cleanName = name.replaceAll("[^a-zA-Z0-9]", "").toUpperCase();
-        if (cleanName.length() >= 4) {
-            return cleanName.substring(0, 4);
-        } else if (!cleanName.isEmpty()) {
-            return String.format("%-4s", cleanName).replace(' ', 'X');
-        }
-        return "CAT_" + System.currentTimeMillis() % 10000;
+    private CategoryDto toDto(Category c) {
+        return CategoryDto.builder()
+                .categoryId(c.getCategoryId())
+                .categoryCode(c.getCategoryCode())
+                .categoryName(c.getCategoryName())
+                .description(c.getDescription())
+                .icon(c.getIcon())
+                .colorCode(c.getColorCode())
+                .displayOrder(c.getDisplayOrder())
+                .status(c.getStatus())
+                .remarks(c.getRemarks())
+                .createdBy(c.getCreatedBy())
+                .updatedBy(c.getUpdatedBy())
+                .createdAt(c.getCreatedAt())
+                .updatedAt(c.getUpdatedAt())
+                .build();
     }
 }

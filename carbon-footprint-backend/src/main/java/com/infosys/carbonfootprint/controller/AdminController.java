@@ -4,6 +4,7 @@ import com.infosys.carbonfootprint.dto.*;
 import com.infosys.carbonfootprint.entity.UserStatus;
 import com.infosys.carbonfootprint.response.ApiResponse;
 import com.infosys.carbonfootprint.service.AdminService;
+import com.infosys.carbonfootprint.service.ActivityLogService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,9 @@ public class AdminController {
     @Autowired
     private AdminService adminService;
 
+    @Autowired
+    private ActivityLogService activityLogService;
+
     @GetMapping("/dashboard")
     public ResponseEntity<ApiResponse<DashboardStatsDto>> getDashboardStats() {
         DashboardStatsDto stats = adminService.getDashboardStats();
@@ -33,6 +37,11 @@ public class AdminController {
     public ResponseEntity<ApiResponse<List<UserSummaryDto>>> getAllUsers() {
         List<UserSummaryDto> users = adminService.getAllUsers();
         return ResponseEntity.ok(ApiResponse.success("All registered users retrieved successfully", users));
+    }
+
+    @GetMapping("/activity-logs")
+    public ResponseEntity<ApiResponse<List<ActivityLogDto>>> getAllActivityLogs() {
+        return ResponseEntity.ok(ApiResponse.success("Activity logs retrieved successfully", activityLogService.getAllForAdmin()));
     }
 
     @GetMapping("/users/status/{status}")

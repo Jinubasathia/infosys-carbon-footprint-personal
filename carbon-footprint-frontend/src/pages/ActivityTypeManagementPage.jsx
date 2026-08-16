@@ -1,6 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -88,7 +86,7 @@ const ActivityTypeManagementPage = () => {
 
   const openAddModal = () => {
     setEditingActivity(null);
-    const defaultCatId = categories.length > 0 ? categories[0].id : '';
+    const defaultCatId = categories.length > 0 ? categories[0].categoryId : '';
     setFormData({
       categoryId: defaultCatId,
       activityCode: '',
@@ -130,26 +128,49 @@ const ActivityTypeManagementPage = () => {
   const validateForm = () => {
     const errors = {};
     if (!formData.categoryId) {
-      errors.categoryId = 'Category is mandatory';
+      errors.categoryId = 'Category is required';
     }
     if (!formData.activityName || !formData.activityName.trim()) {
-      errors.activityName = 'Activity Name is mandatory';
+      errors.activityName = 'Activity name is required';
     }
     if (!formData.unit || !formData.unit.trim()) {
-      errors.unit = 'Unit is mandatory';
+      errors.unit = 'Unit of measurement is required';
     }
-    if (!formData.status) {
-      errors.status = 'Status is mandatory';
-    }
+    const min = Number(formData.minQuantity);
+    const max = Number(formData.maxQuantity);
+    const def = Number(formData.defaultQuantity);
+    if (!Number.isFinite(min) || min < 0) errors.minQuantity = 'Minimum quantity must be a valid non-negative number';
+    if (!Number.isFinite(max) || max <= min) errors.maxQuantity = 'Maximum quantity must be greater than minimum quantity';
+    if (!Number.isFinite(def) || def < min || def > max) errors.defaultQuantity = 'Default quantity must be between minimum and maximum quantity';
+    if (!Number.isInteger(Number(formData.displayOrder)) || Number(formData.displayOrder) < 1) errors.displayOrder = 'Display order must be a valid positive number';
+    if (!['ACTIVE', 'INACTIVE'].includes(formData.status)) errors.status = 'Status must be ACTIVE or INACTIVE';
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
+  };
+
+  const applyBackendErrors = (error) => {
+    const backendErrors = error?.data;
+    if (backendErrors && typeof backendErrors === 'object' && !Array.isArray(backendErrors)) {
+      setFormErrors(backendErrors);
+      return true;
+    }
+    const message = error?.message || 'Unable to save activity type';
+    const lowered = message.toLowerCase();
+    if (lowered.includes('code')) setFormErrors({ activityCode: message });
+    else if (lowered.includes('name') || lowered.includes('activity')) setFormErrors({ activityName: message });
+    else if (lowered.includes('category')) setFormErrors({ categoryId: message });
+    else if (lowered.includes('unit')) setFormErrors({ unit: message });
+    else return false;
+    return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
+    if (editingActivity && !window.confirm(`Update activity type "${editingActivity.activityName}"?`)) return;
 
     setSubmitting(true);
+    setFormErrors({});
     try {
       const payload = {
         ...formData,
@@ -161,7 +182,7 @@ const ActivityTypeManagementPage = () => {
       };
 
       if (editingActivity) {
-        const res = await api.put(`/admin/activity-types/${editingActivity.id}`, payload);
+        const res = await api.put(`/admin/activity-types/${editingActivity.activityTypeId}`, payload);
         showToast(res.message || 'Activity Type updated successfully!', 'success');
       } else {
         const res = await api.post('/admin/activity-types', payload);
@@ -170,16 +191,7 @@ const ActivityTypeManagementPage = () => {
       setIsModalOpen(false);
       fetchData();
     } catch (err) {
-      const msg = typeof err === 'string' ? err : (err?.response?.data?.message || 'Operation failed');
-      if (msg.includes('Name')) {
-        setFormErrors((prev) => ({ ...prev, activityName: msg }));
-      } else if (msg.includes('Code')) {
-        setFormErrors((prev) => ({ ...prev, activityCode: msg }));
-      } else if (msg.includes('Category')) {
-        setFormErrors((prev) => ({ ...prev, categoryId: msg }));
-      } else {
-        showToast(msg, 'error');
-      }
+      if (!applyBackendErrors(err)) showToast(err?.message || 'Unable to save activity type. Please try again.', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -187,7 +199,21 @@ const ActivityTypeManagementPage = () => {
 
   const handleToggleStatus = async (act) => {
     try {
-      const res = await api.patch(`/admin/activity-types/${act.id}/status`);
+      const payload = {
+        categoryId: act.categoryId,
+        activityCode: act.activityCode,
+        activityName: act.activityName,
+        description: act.description,
+        unit: act.unit,
+        minQuantity: act.minQuantity,
+        maxQuantity: act.maxQuantity,
+        defaultQuantity: act.defaultQuantity,
+        displayOrder: act.displayOrder,
+        icon: act.icon,
+        status: act.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE',
+        remarks: act.remarks,
+      };
+      const res = await api.put(`/admin/activity-types/${act.activityTypeId}`, payload);
       showToast(res.message || `Activity ${act.activityName} status toggled!`, 'success');
       fetchData();
     } catch (err) {
@@ -198,7 +224,7 @@ const ActivityTypeManagementPage = () => {
   const handleDelete = async () => {
     if (!deletingActivity) return;
     try {
-      const res = await api.delete(`/admin/activity-types/${deletingActivity.id}`);
+      const res = await api.delete(`/admin/activity-types/${deletingActivity.activityTypeId}`);
       showToast(res.message || 'Activity Type deleted successfully!', 'info');
       setDeletingActivity(null);
       fetchData();
@@ -231,9 +257,7 @@ const ActivityTypeManagementPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col">
-      <Navbar />
-
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-5 lg:px-8 py-8 space-y-8">
         
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
@@ -302,13 +326,13 @@ const ActivityTypeManagementPage = () => {
             </button>
 
             {categories.map((cat) => {
-              const count = activityTypes.filter((a) => a.categoryId === cat.id).length;
+              const count = activityTypes.filter((a) => a.categoryId === cat.categoryId).length;
               return (
                 <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategoryId(cat.id)}
+                  key={cat.categoryId}
+                  onClick={() => setSelectedCategoryId(cat.categoryId)}
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 ${
-                    String(selectedCategoryId) === String(cat.id)
+                    String(selectedCategoryId) === String(cat.categoryId)
                       ? 'bg-emerald-600 text-slate-950 shadow-md shadow-emerald-900/30'
                       : 'bg-slate-800/80 text-slate-400 hover:text-slate-200 border border-slate-700/60'
                   }`}
@@ -380,7 +404,7 @@ const ActivityTypeManagementPage = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-800">
                   {filteredActivityTypes.map((act) => (
-                    <tr key={act.id} className="hover:bg-slate-800/40 transition-colors">
+                    <tr key={act.activityTypeId} className="hover:bg-slate-800/40 transition-colors">
                       <td className="py-4 px-5">
                         <span className="font-mono text-xs px-2.5 py-1 rounded-md bg-slate-900 text-emerald-400 border border-slate-700 font-bold">
                           {act.activityCode}
@@ -493,7 +517,7 @@ const ActivityTypeManagementPage = () => {
                 >
                   <option value="">-- Select Category --</option>
                   {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
+                    <option key={cat.categoryId} value={cat.categoryId}>
                       {cat.categoryName} ({cat.categoryCode})
                     </option>
                   ))}
@@ -516,7 +540,7 @@ const ActivityTypeManagementPage = () => {
                     placeholder="Auto-generated if blank (e.g. TRANS_CAR)"
                     value={formData.activityCode}
                     onChange={(e) => setFormData({ ...formData, activityCode: e.target.value.toUpperCase() })}
-                    className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm font-mono text-emerald-400 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                    className={`w-full px-3.5 py-2.5 bg-slate-800 border rounded-xl text-sm font-mono text-emerald-400 placeholder-slate-500 focus:outline-none ${formErrors.activityCode ? 'border-rose-500' : 'border-slate-700 focus:border-emerald-500'}`}
                   />
                   {formErrors.activityCode && (
                     <p className="text-rose-400 text-xs mt-1 flex items-center gap-1">
@@ -624,8 +648,9 @@ const ActivityTypeManagementPage = () => {
                     step="any"
                     value={formData.minQuantity}
                     onChange={(e) => setFormData({ ...formData, minQuantity: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                    className={`w-full px-3 py-2 bg-slate-800 border rounded-xl text-xs text-white focus:outline-none font-mono ${formErrors.minQuantity ? 'border-rose-500' : 'border-slate-700 focus:border-emerald-500'}`}
                   />
+                  {formErrors.minQuantity && <p className="mt-1 flex items-center gap-1 text-xs text-rose-400"><AlertCircle className="h-3.5 w-3.5" />{formErrors.minQuantity}</p>}
                 </div>
 
                 <div>
@@ -637,8 +662,9 @@ const ActivityTypeManagementPage = () => {
                     step="any"
                     value={formData.maxQuantity}
                     onChange={(e) => setFormData({ ...formData, maxQuantity: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                    className={`w-full px-3 py-2 bg-slate-800 border rounded-xl text-xs text-white focus:outline-none font-mono ${formErrors.maxQuantity ? 'border-rose-500' : 'border-slate-700 focus:border-emerald-500'}`}
                   />
+                  {formErrors.maxQuantity && <p className="mt-1 flex items-center gap-1 text-xs text-rose-400"><AlertCircle className="h-3.5 w-3.5" />{formErrors.maxQuantity}</p>}
                 </div>
 
                 <div>
@@ -650,8 +676,9 @@ const ActivityTypeManagementPage = () => {
                     step="any"
                     value={formData.defaultQuantity}
                     onChange={(e) => setFormData({ ...formData, defaultQuantity: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-emerald-400 font-bold focus:outline-none focus:border-emerald-500 font-mono"
+                    className={`w-full px-3 py-2 bg-slate-800 border rounded-xl text-xs text-emerald-400 font-bold focus:outline-none font-mono ${formErrors.defaultQuantity ? 'border-rose-500' : 'border-slate-700 focus:border-emerald-500'}`}
                   />
+                  {formErrors.defaultQuantity && <p className="mt-1 flex items-center gap-1 text-xs text-rose-400"><AlertCircle className="h-3.5 w-3.5" />{formErrors.defaultQuantity}</p>}
                 </div>
               </div>
 
@@ -665,9 +692,10 @@ const ActivityTypeManagementPage = () => {
                     type="number"
                     min="1"
                     value={formData.displayOrder}
-                    onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value) || 1 })}
-                    className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500"
+                    onChange={(e) => setFormData({ ...formData, displayOrder: e.target.value })}
+                    className={`w-full px-3.5 py-2.5 bg-slate-800 border rounded-xl text-sm text-white focus:outline-none ${formErrors.displayOrder ? 'border-rose-500' : 'border-slate-700 focus:border-emerald-500'}`}
                   />
+                  {formErrors.displayOrder && <p className="mt-1 flex items-center gap-1 text-xs text-rose-400"><AlertCircle className="h-3.5 w-3.5" />{formErrors.displayOrder}</p>}
                 </div>
 
                 <div>
@@ -677,11 +705,12 @@ const ActivityTypeManagementPage = () => {
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500"
+                    className={`w-full px-3.5 py-2.5 bg-slate-800 border rounded-xl text-sm text-white focus:outline-none ${formErrors.status ? 'border-rose-500' : 'border-slate-700 focus:border-emerald-500'}`}
                   >
                     <option value="ACTIVE">ACTIVE</option>
                     <option value="INACTIVE">INACTIVE</option>
                   </select>
+                  {formErrors.status && <p className="mt-1 flex items-center gap-1 text-xs text-rose-400"><AlertCircle className="h-3.5 w-3.5" />{formErrors.status}</p>}
                 </div>
               </div>
 
@@ -751,7 +780,6 @@ const ActivityTypeManagementPage = () => {
         </div>
       )}
 
-      <Footer />
     </div>
   );
 };

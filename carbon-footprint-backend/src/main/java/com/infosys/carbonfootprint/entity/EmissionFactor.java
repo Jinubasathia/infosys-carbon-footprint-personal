@@ -5,37 +5,40 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
-@Table(name = "categories")
+@Table(name = "emission_factors")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-public class Category {
+public class EmissionFactor {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "category_id")
-    private Long categoryId;
+    @Column(name = "emission_factor_id")
+    private Long emissionFactorId;
 
-    @Column(name = "category_code", nullable = false, unique = true, length = 20)
-    private String categoryCode;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "activity_type_id", nullable = false)
+    private ActivityType activityType;
 
-    @Column(name = "category_name", nullable = false, unique = true, length = 100)
-    private String categoryName;
+    @Column(name = "emission_factor", nullable = false)
+    private Double emissionFactor;
 
-    @Column(nullable = false, length = 500)
-    private String description;
+    @Column(nullable = false, length = 20)
+    private String unit;
 
-    @Column(length = 50)
-    private String icon;
+    @Column(name = "source_name", nullable = false, length = 100)
+    private String sourceName;
 
-    @Column(name = "color_code", length = 10)
-    private String colorCode;
+    @Column(name = "source_version", length = 50)
+    private String sourceVersion;
 
-    @Column(name = "display_order")
-    private Integer displayOrder;
+    @Column(name = "effective_from", nullable = false)
+    private LocalDate effectiveFrom;
+
+    @Column(name = "effective_to")
+    private LocalDate effectiveTo;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -58,8 +61,4 @@ public class Category {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
-    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @Builder.Default
-    private List<ActivityType> activityTypes = new ArrayList<>();
 }

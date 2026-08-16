@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import { getCategoryImage } from '../constants/categoryImages';
 import { 
   FolderPlus, Edit3, Trash2, CheckCircle2, XCircle, Search, 
   RefreshCw, Plus, Layers, ToggleLeft, ToggleRight, AlertCircle,
   Car, Zap, Utensils, ShoppingBag, Truck, Flame, Factory, TreePine, 
-  Wind, Plane, Bike, Bus, Train, Trash, Home, Globe, Activity
+  Wind, Plane, Bike, Bus, Train, Trash, Home, Globe, Activity, Grid2X2, List
 } from 'lucide-react';
 
 const ICON_OPTIONS = [
@@ -37,6 +36,7 @@ const CategoryManagementPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [viewMode, setViewMode] = useState('cards');
 
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -123,11 +123,12 @@ const CategoryManagementPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
+    if (editingCategory && !window.confirm(`Update category "${editingCategory.categoryName}"?`)) return;
 
     setSubmitting(true);
     try {
       if (editingCategory) {
-        const res = await api.put(`/admin/categories/${editingCategory.id}`, formData);
+        const res = await api.put(`/admin/categories/${editingCategory.categoryId}`, formData);
         showToast(res.message || 'Category updated successfully!', 'success');
       } else {
         const res = await api.post('/admin/categories', formData);
@@ -150,8 +151,13 @@ const CategoryManagementPage = () => {
   };
 
   const handleToggleStatus = async (cat) => {
+    const action = cat.status === 'ACTIVE' ? 'deactivate' : 'activate';
+    if (!window.confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} category "${cat.categoryName}"?`)) return;
     try {
-      const res = await api.patch(`/admin/categories/${cat.id}/status`);
+      const endpoint = cat.status === 'ACTIVE'
+        ? `/admin/categories/${cat.categoryId}/deactivate`
+        : `/admin/categories/${cat.categoryId}/activate`;
+      const res = await api.patch(endpoint);
       showToast(res.message || `Category ${cat.categoryName} status toggled!`, 'success');
       fetchCategories();
     } catch (err) {
@@ -162,7 +168,7 @@ const CategoryManagementPage = () => {
   const handleDelete = async () => {
     if (!deletingCategory) return;
     try {
-      const res = await api.delete(`/admin/categories/${deletingCategory.id}`);
+      const res = await api.delete(`/admin/categories/${deletingCategory.categoryId}`);
       showToast(res.message || 'Category deleted successfully!', 'info');
       setDeletingCategory(null);
       fetchCategories();
@@ -191,9 +197,7 @@ const CategoryManagementPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col">
-      <Navbar />
-
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-5 lg:px-8 py-8 space-y-8">
         
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
@@ -279,8 +283,14 @@ const CategoryManagementPage = () => {
                 {status}
               </button>
             ))}
+            <div className="ml-1 flex rounded-lg border border-slate-700 bg-slate-900 p-1">
+              <button aria-label="Card view" onClick={() => setViewMode('cards')} className={`rounded p-1.5 ${viewMode === 'cards' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400'}`}><Grid2X2 className="w-4 h-4" /></button>
+              <button aria-label="Table view" onClick={() => setViewMode('table')} className={`rounded p-1.5 ${viewMode === 'table' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400'}`}><List className="w-4 h-4" /></button>
+            </div>
           </div>
         </div>
+
+        <p className="text-xs font-medium text-slate-500">Showing {filteredCategories.length} categor{filteredCategories.length === 1 ? 'y' : 'ies'}</p>
 
         {/* Categories Table */}
         <div className="bg-slate-800/50 backdrop-blur-md rounded-2xl border border-slate-700/80 overflow-hidden shadow-xl">
@@ -294,6 +304,23 @@ const CategoryManagementPage = () => {
               <Layers className="w-12 h-12 mx-auto text-slate-600 mb-3" />
               <p className="font-semibold text-slate-300">No categories found</p>
               <p className="text-xs text-slate-500 mt-1">Try adding a new category or adjusting your search filters.</p>
+            </div>
+          ) : viewMode === 'cards' ? (
+            <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 xl:grid-cols-3">
+              {filteredCategories.map((cat) => (
+                <article key={cat.categoryId} className="group relative overflow-hidden rounded-2xl border border-slate-700 bg-slate-900/70 transition hover:-translate-y-0.5 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-950/20">
+                  <div className="relative h-36 overflow-hidden">
+                    <img src={getCategoryImage(cat)} alt={`${cat.categoryName} sustainability`} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/25 to-slate-950/10" />
+                    <span className="absolute bottom-3 left-4 h-8 w-1 rounded-r" style={{ backgroundColor: cat.colorCode || '#10B981' }} />
+                  </div>
+                  <div className="p-5 pt-4">
+                    <div className="flex items-start justify-between gap-3"><div className="flex items-center gap-3"><div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-700 bg-slate-950 shadow-lg shadow-slate-950">{renderIcon(cat.icon, cat.colorCode)}</div><div><h3 className="font-bold text-white">{cat.categoryName}</h3><span className="font-mono text-[10px] font-bold text-emerald-400">{cat.categoryCode}</span></div></div><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${cat.status === 'ACTIVE' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300'}`}>{cat.status}</span></div>
+                    <p className="mt-4 min-h-10 text-sm leading-relaxed text-slate-400">{cat.description || 'No description provided.'}</p>
+                    <div className="mt-4 flex items-center justify-between border-t border-slate-800 pt-4"><span className="text-xs text-slate-500">Display order <b className="text-slate-300">{cat.displayOrder ?? '-'}</b></span><div className="flex gap-2"><button onClick={() => openEditModal(cat)} className="rounded-lg bg-slate-800 p-2 text-teal-300 hover:bg-slate-700" title="Edit category"><Edit3 className="h-4 w-4" /></button><button onClick={() => handleToggleStatus(cat)} className="rounded-lg bg-slate-800 p-2 text-emerald-300 hover:bg-slate-700" title="Change status">{cat.status === 'ACTIVE' ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}</button><button onClick={() => setDeletingCategory(cat)} className="rounded-lg bg-slate-800 p-2 text-rose-300 hover:bg-rose-950" title="Delete category"><Trash2 className="h-4 w-4" /></button></div></div>
+                  </div>
+                </article>
+              ))}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -310,7 +337,7 @@ const CategoryManagementPage = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-800">
                   {filteredCategories.map((cat) => (
-                    <tr key={cat.id} className="hover:bg-slate-800/40 transition-colors">
+                    <tr key={cat.categoryId} className="hover:bg-slate-800/40 transition-colors">
                       <td className="py-4 px-5">
                         <span className="font-mono text-xs px-2.5 py-1 rounded-md bg-slate-900 text-emerald-400 border border-slate-700 font-bold">
                           {cat.categoryCode}
@@ -599,7 +626,6 @@ const CategoryManagementPage = () => {
         </div>
       )}
 
-      <Footer />
     </div>
   );
 };

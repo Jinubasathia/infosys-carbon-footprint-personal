@@ -1,84 +1,70 @@
 package com.infosys.carbonfootprint.controller;
 
-import com.infosys.carbonfootprint.dto.CategoryRequestDto;
-import com.infosys.carbonfootprint.dto.CategoryResponseDto;
+import com.infosys.carbonfootprint.dto.CategoryDto;
 import com.infosys.carbonfootprint.response.ApiResponse;
+import com.infosys.carbonfootprint.security.UserDetailsImpl;
 import com.infosys.carbonfootprint.service.CategoryService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.security.Principal;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/api/v1/admin/categories")
+@PreAuthorize("hasRole('ADMIN')")
 public class CategoryController {
 
-    @Autowired
-    private CategoryService categoryService;
+    @Autowired private CategoryService categoryService;
 
-    // Admin Endpoints
-    @PostMapping("/admin/categories")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<CategoryResponseDto>> createCategory(
-            @Valid @RequestBody CategoryRequestDto requestDto,
-            Principal principal) {
-        String username = principal != null ? principal.getName() : "ADMIN";
-        CategoryResponseDto created = categoryService.createCategory(requestDto, username);
-        return new ResponseEntity<>(ApiResponse.success("Category created successfully!", created), HttpStatus.CREATED);
+    @PostMapping
+    public ResponseEntity<ApiResponse<CategoryDto>> create(
+            @Valid @RequestBody CategoryDto dto,
+            @AuthenticationPrincipal UserDetailsImpl user) {
+        return new ResponseEntity<>(ApiResponse.success("Category created successfully",
+                categoryService.create(dto, user.getEmail())), HttpStatus.CREATED);
     }
 
-    @PutMapping("/admin/categories/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<CategoryResponseDto>> updateCategory(
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<CategoryDto>>> getAll() {
+        return ResponseEntity.ok(ApiResponse.success("Categories fetched", categoryService.getAll()));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<CategoryDto>> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success("Category fetched", categoryService.getById(id)));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<CategoryDto>> update(
             @PathVariable Long id,
-            @Valid @RequestBody CategoryRequestDto requestDto,
-            Principal principal) {
-        String username = principal != null ? principal.getName() : "ADMIN";
-        CategoryResponseDto updated = categoryService.updateCategory(id, requestDto, username);
-        return ResponseEntity.ok(ApiResponse.success("Category updated successfully!", updated));
+            @Valid @RequestBody CategoryDto dto,
+            @AuthenticationPrincipal UserDetailsImpl user) {
+        return ResponseEntity.ok(ApiResponse.success("Category updated successfully",
+                categoryService.update(id, dto, user.getEmail())));
     }
 
-    @DeleteMapping("/admin/categories/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Void>> deleteCategory(@PathVariable Long id) {
-        categoryService.deleteCategory(id);
-        return ResponseEntity.ok(ApiResponse.success("Category deleted successfully!", null));
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<String>> delete(@PathVariable Long id) {
+        categoryService.delete(id);
+        return ResponseEntity.ok(ApiResponse.success("Category deleted successfully"));
     }
 
-    @PatchMapping("/admin/categories/{id}/status")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<CategoryResponseDto>> toggleCategoryStatus(
-            @PathVariable Long id,
-            Principal principal) {
-        String username = principal != null ? principal.getName() : "ADMIN";
-        CategoryResponseDto updated = categoryService.toggleCategoryStatus(id, username);
-        return ResponseEntity.ok(ApiResponse.success("Category status updated successfully!", updated));
+    @PatchMapping("/{id}/activate")
+    public ResponseEntity<ApiResponse<CategoryDto>> activate(
+            @PathVariable Long id, @AuthenticationPrincipal UserDetailsImpl user) {
+        return ResponseEntity.ok(ApiResponse.success("Category activated",
+                categoryService.activate(id, user.getEmail())));
     }
 
-    @GetMapping("/admin/categories")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<List<CategoryResponseDto>>> getAllCategories() {
-        List<CategoryResponseDto> categories = categoryService.getAllCategories();
-        return ResponseEntity.ok(ApiResponse.success("Fetched all categories successfully", categories));
-    }
-
-    @GetMapping("/admin/categories/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<CategoryResponseDto>> getCategoryById(@PathVariable Long id) {
-        CategoryResponseDto category = categoryService.getCategoryById(id);
-        return ResponseEntity.ok(ApiResponse.success("Category details fetched", category));
-    }
-
-    // User Endpoints
-    @GetMapping("/user/categories")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    public ResponseEntity<ApiResponse<List<CategoryResponseDto>>> getActiveCategories() {
-        List<CategoryResponseDto> categories = categoryService.getActiveCategories();
-        return ResponseEntity.ok(ApiResponse.success("Fetched active categories", categories));
+    @PatchMapping("/{id}/deactivate")
+    public ResponseEntity<ApiResponse<CategoryDto>> deactivate(
+            @PathVariable Long id, @AuthenticationPrincipal UserDetailsImpl user) {
+        return ResponseEntity.ok(ApiResponse.success("Category deactivated",
+                categoryService.deactivate(id, user.getEmail())));
     }
 }

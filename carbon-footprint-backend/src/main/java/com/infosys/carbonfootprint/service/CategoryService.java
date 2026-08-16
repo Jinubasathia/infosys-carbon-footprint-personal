@@ -1,23 +1,15 @@
 package com.infosys.carbonfootprint.service;
 
-import com.infosys.carbonfootprint.dto.CategoryRequestDto;
-import com.infosys.carbonfootprint.dto.CategoryResponseDto;
-
+import com.infosys.carbonfootprint.dto.CategoryDto;
 import java.util.List;
 
 public interface CategoryService {
-
-    CategoryResponseDto createCategory(CategoryRequestDto dto, String currentUsername);
-
-    CategoryResponseDto updateCategory(Long id, CategoryRequestDto dto, String currentUsername);
-
-    void deleteCategory(Long id);
-
-    CategoryResponseDto toggleCategoryStatus(Long id, String currentUsername);
-
-    List<CategoryResponseDto> getAllCategories();
-
-    List<CategoryResponseDto> getActiveCategories();
-
-    CategoryResponseDto getCategoryById(Long id);
+    CategoryDto create(CategoryDto dto, String createdBy);
+    List<CategoryDto> getAll();
+    CategoryDto getById(Long id);
+    CategoryDto update(Long id, CategoryDto dto, String updatedBy);
+    void delete(Long id);
+    CategoryDto activate(Long id, String updatedBy);
+    CategoryDto deactivate(Long id, String updatedBy);
+    List<CategoryDto> getActiveCategories();
 }

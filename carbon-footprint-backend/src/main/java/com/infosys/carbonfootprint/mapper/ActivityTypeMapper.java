@@ -30,8 +30,8 @@ public class ActivityTypeMapper {
     public ActivityTypeResponseDto toDto(ActivityType entity) {
         if (entity == null) return null;
         return ActivityTypeResponseDto.builder()
-                .id(entity.getId())
-                .categoryId(entity.getCategory() != null ? entity.getCategory().getId() : null)
+                .id(entity.getActivityTypeId())
+                .categoryId(entity.getCategory() != null ? entity.getCategory().getCategoryId() : null)
                 .categoryName(entity.getCategory() != null ? entity.getCategory().getCategoryName() : null)
                 .categoryCode(entity.getCategory() != null ? entity.getCategory().getCategoryCode() : null)
                 .activityCode(entity.getActivityCode())

@@ -28,7 +28,9 @@ api.interceptors.response.use(
         window.location.href = '/login?expired=true';
       }
     }
-    return Promise.reject(error.response?.data?.message || error.message || 'An unexpected error occurred');
+    // Preserve API validation details so forms can show field-level feedback.
+    if (error.response?.data) return Promise.reject(error.response.data);
+    return Promise.reject({ message: error.message || 'An unexpected error occurred' });
   }
 );
 
