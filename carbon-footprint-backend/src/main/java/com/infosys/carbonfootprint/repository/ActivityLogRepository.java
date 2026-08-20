@@ -28,4 +28,36 @@ public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long> 
                                    @Param("activityTypeId") Long activityTypeId,
                                    @Param("fromDate") LocalDate fromDate,
                                    @Param("toDate") LocalDate toDate);
+
+    // Dedicated strongly-typed query for monthly emission totals (used by Goals).
+    // No nullable parameters — avoids PostgreSQL type inference error on NULL.
+    @Query("SELECT a FROM ActivityLog a WHERE a.user.id = :userId " +
+           "AND a.activityDate >= :startDate AND a.activityDate <= :endDate")
+    List<ActivityLog> findByUserIdAndDateRange(@Param("userId") Long userId,
+                                               @Param("startDate") LocalDate startDate,
+                                               @Param("endDate") LocalDate endDate);
+
+    // Returns all distinct activity dates for a user, sorted descending — used for streak calculation.
+    @Query("SELECT DISTINCT a.activityDate FROM ActivityLog a WHERE a.user.id = :userId ORDER BY a.activityDate DESC")
+    List<LocalDate> findDistinctActivityDatesByUserId(@Param("userId") Long userId);
+
+    // Sum of totalEmission for a user within a date range — used for sustainability score.
+    @Query("SELECT COALESCE(SUM(a.totalEmission), 0.0) FROM ActivityLog a WHERE a.user.id = :userId " +
+           "AND a.activityDate >= :startDate AND a.activityDate <= :endDate")
+    Double sumEmissionByUserIdAndDateRange(@Param("userId") Long userId,
+                                           @Param("startDate") LocalDate startDate,
+                                           @Param("endDate") LocalDate endDate);
+
+    // Count of distinct activity dates for a user — used to detect empty state.
+    @Query("SELECT COUNT(DISTINCT a.activityDate) FROM ActivityLog a WHERE a.user.id = :userId")
+    long countDistinctActivityDatesByUserId(@Param("userId") Long userId);
+
+    @Query("SELECT a FROM ActivityLog a WHERE a.user.id = :userId " +
+           "AND a.category.categoryId = :categoryId " +
+           "AND a.activityDate >= :fromDate AND a.activityDate <= :toDate")
+    List<ActivityLog> findByUserIdAndCategoryCategoryIdAndActivityDateBetween(
+           @Param("userId") Long userId,
+           @Param("categoryId") Long categoryId,
+           @Param("fromDate") LocalDate fromDate,
+           @Param("toDate") LocalDate toDate);
 }

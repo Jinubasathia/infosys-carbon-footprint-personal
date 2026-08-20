@@ -14,26 +14,30 @@ import ActivityTypeManagementPage from './pages/ActivityTypeManagementPage';
 import EmissionFactorManagementPage from './pages/EmissionFactorManagementPage';
 import ActivityLoggingPage from './pages/ActivityLoggingPage';
 import UserDashboard from './pages/UserDashboard';
+import ReportsAnalyticsPage from './pages/ReportsAnalyticsPage';
+import MyProfilePage from './pages/MyProfilePage';
+import AlertHistoryPage from './pages/AlertHistoryPage';
+import GoalsPage from './pages/GoalsPage';
+import RecommendationsPage from './pages/RecommendationsPage';
+import ArticlesPage from './pages/ArticlesPage';
+import AdminEmissionLimitsPage from './pages/AdminEmissionLimitsPage';
+import AdminArticlesPage from './pages/AdminArticlesPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import { useAuth } from './context/AuthContext';
+
+function PublicOnly({ children }) {
+  const { user, isAdmin } = useAuth();
+  return user ? <Navigate to={isAdmin() ? '/admin/dashboard' : '/user/dashboard'} replace /> : children;
+}
 
 function App() {
   return (
     <Routes>
-      {/* Public Pages */}
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/login" element={<UserLoginPage />} />
-      <Route path="/admin/login" element={<AdminLoginPage />} />
-
-      {/* Protected Routes */}
-      <Route
-        path="/reset-password"
-        element={
-          <ProtectedRoute>
-            <ResetPasswordPage />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/" element={<PublicOnly><LandingPage /></PublicOnly>} />
+      <Route path="/register" element={<PublicOnly><RegisterPage /></PublicOnly>} />
+      <Route path="/login" element={<PublicOnly><UserLoginPage /></PublicOnly>} />
+      <Route path="/admin/login" element={<PublicOnly><AdminLoginPage /></PublicOnly>} />
+      <Route path="/reset-password" element={<ProtectedRoute><ResetPasswordPage /></ProtectedRoute>} />
 
       <Route path="/admin" element={<ProtectedRoute requireAdmin={true}><AdminShell /></ProtectedRoute>}>
         <Route path="dashboard" element={<AdminDashboard />} />
@@ -42,15 +46,23 @@ function App() {
         <Route path="activity-types" element={<ActivityTypeManagementPage />} />
         <Route path="emission-factors" element={<EmissionFactorManagementPage />} />
         <Route path="activity-logs" element={<AdminActivityLogsPage />} />
+        <Route path="emission-limits" element={<AdminEmissionLimitsPage />} />
+        <Route path="articles" element={<AdminArticlesPage />} />
       </Route>
 
       <Route path="/user" element={<ProtectedRoute><UserShell /></ProtectedRoute>}>
         <Route path="dashboard" element={<UserDashboard />} />
         <Route path="activities" element={<ActivityLoggingPage />} />
         <Route path="history" element={<ActivityLoggingPage />} />
+        <Route path="reports" element={<ReportsAnalyticsPage />} />
+        <Route path="profile" element={<MyProfilePage />} />
+        <Route path="alerts" element={<AlertHistoryPage />} />
+        <Route path="goals" element={<GoalsPage />} />
+        <Route path="recommendations" element={<RecommendationsPage />} />
+        <Route path="articles" element={<ArticlesPage />} />
+        <Route path="articles/:id" element={<ArticlesPage />} />
       </Route>
 
-      {/* Catch-all fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

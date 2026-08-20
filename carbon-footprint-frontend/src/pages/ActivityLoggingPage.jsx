@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { Activity, Plus, Calendar, Leaf, Trash2, Edit3, Search, RefreshCw, AlertCircle } from 'lucide-react';
 
 const ActivityLoggingPage = () => {
-  const { showToast } = useAuth();
+  const { showToast, showWarning } = useAuth();
   const location = useLocation();
   const isHistory = location.pathname.endsWith('/history');
   const [categories, setCategories] = useState([]);
@@ -80,21 +80,42 @@ const ActivityLoggingPage = () => {
   }, [selectedCategoryId]);
 
   useEffect(() => {
-    if (!selectedActivityType) { setEmissionFactor(null); return; }
+    if (!selectedActivityType?.activityTypeId) { setEmissionFactor(null); return; }
+    let cancelled = false;
     const loadFactor = async () => {
       setFactorLoading(true); setEmissionFactor(null);
       try {
-        const response = await api.get(`/user/data/emission-factor/${selectedActivityType.activityTypeId}`, { params: { activityDate: formData.activityDate } });
-        setEmissionFactor(response.data || null);
-      } catch { setEmissionFactor(null); }
-      finally { setFactorLoading(false); }
+        const response = await api.get(
+          `/user/data/emission-factor/${selectedActivityType.activityTypeId}`,
+          { params: { activityDate: formData.activityDate } }
+        );
+        // response is the ApiResponse wrapper; response.data is the EmissionFactorDto (or null)
+        if (!cancelled) {
+          const ef = response.data ?? null;
+          setEmissionFactor(ef);
+          if (ef) {
+            setFormErrors(prev => {
+              if (prev.activityTypeId?.includes('emission factor')) {
+                return { ...prev, activityTypeId: undefined };
+              }
+              return prev;
+            });
+          }
+        }
+      } catch {
+        if (!cancelled) setEmissionFactor(null);
+      } finally {
+        if (!cancelled) setFactorLoading(false);
+      }
     };
     loadFactor();
+    return () => { cancelled = true; };
   }, [selectedActivityType?.activityTypeId, formData.activityDate]);
 
   const handleActivityTypeChange = (act) => {
     if (!act) return;
     setSelectedActivityType(act);
+    setFormErrors((previous) => ({ ...previous, activityTypeId: undefined }));
     setFormData((prev) => ({
       ...prev,
       activityTypeId: act.activityTypeId,
@@ -156,6 +177,13 @@ const ActivityLoggingPage = () => {
       setSelectedCategoryId('');
       setSelectedActivityType(null);
       fetchData();
+      // Check for new high-emission warnings
+      try {
+        const alertsRes = await api.get('/user/alerts');
+        const allAlerts = alertsRes.data || [];
+        const newUnread = allAlerts.filter(a => !a.read);
+        newUnread.forEach(a => showWarning(a));
+      } catch {}
     } catch (err) {
       const msg = typeof err === 'string' ? err : (err?.message || 'Unable to save activity. Please try again.');
       const serverFields = err?.data && typeof err.data === 'object' ? err.data : null;
@@ -173,10 +201,13 @@ const ActivityLoggingPage = () => {
   const handleEdit = (log) => {
     setEditingLog(log);
     setSelectedCategoryId(log.categoryId);
-    handleActivityTypeChange({
-      activityTypeId: log.activityTypeId,
-      unit: log.unit,
-    });
+    // Pass the full activity type object so selectedActivityType has all fields
+    // (unit, min/maxQuantity, etc.) needed for validation and factor lookup.
+    // allActivityTypes is loaded on mount and contains every active type.
+    const fullType = allActivityTypes.find(
+      (a) => String(a.activityTypeId) === String(log.activityTypeId)
+    ) || { activityTypeId: log.activityTypeId, unit: log.unit };
+    handleActivityTypeChange(fullType);
     setFormData({
       categoryId: log.categoryId,
       activityTypeId: log.activityTypeId,

@@ -8,6 +8,7 @@ import com.infosys.carbonfootprint.service.ActivityTypeService;
 import com.infosys.carbonfootprint.service.CategoryService;
 import com.infosys.carbonfootprint.service.EmissionFactorService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -53,7 +54,8 @@ public class PublicDataController {
     @GetMapping("/emission-factor/{activityTypeId}")
     public ResponseEntity<ApiResponse<EmissionFactorDto>> getActiveEmissionFactor(
             @PathVariable Long activityTypeId,
-            @RequestParam(required = false) LocalDate activityDate) {
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate activityDate) {
         EmissionFactorDto ef = emissionFactorService.getActiveFactorForActivityType(
                 activityTypeId, activityDate != null ? activityDate : LocalDate.now());
         if (ef == null) {

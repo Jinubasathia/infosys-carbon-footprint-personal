@@ -14,7 +14,7 @@ public interface EmissionFactorRepository extends JpaRepository<EmissionFactor, 
     List<EmissionFactor> findByActivityTypeActivityTypeIdOrderByEffectiveFromDesc(Long activityTypeId);
 
     @Query("SELECT ef FROM EmissionFactor ef WHERE ef.activityType.activityTypeId = :activityTypeId " +
-           "AND ef.status = 'ACTIVE' AND ef.effectiveFrom <= :date " +
+           "AND ef.status = com.infosys.carbonfootprint.entity.CategoryStatus.ACTIVE AND ef.effectiveFrom <= :date " +
            "AND (ef.effectiveTo IS NULL OR ef.effectiveTo >= :date) " +
            "ORDER BY ef.effectiveFrom DESC")
     Optional<EmissionFactor> findActiveFactorForDate(@Param("activityTypeId") Long activityTypeId,

@@ -24,6 +24,7 @@ public class UserMapper {
                 .gender(user.getGender())
                 .status(user.getStatus())
                 .firstLogin(user.isFirstLogin())
+                .profilePhotoUrl(user.getProfilePhotoUrl())
                 .createdAt(user.getCreatedAt())
                 .build();
     }
@@ -44,6 +45,7 @@ public class UserMapper {
                 .alternateMobile(user.getAlternateMobile())
                 .status(user.getStatus())
                 .firstLogin(user.isFirstLogin())
+                .profilePhotoUrl(user.getProfilePhotoUrl())
                 .address(toAddressDto(user.getAddress()))
                 .governmentId(toGovernmentIdDto(user.getGovernmentId()))
                 .roles(user.getRoles() != null ? user.getRoles().stream().map(r -> r.getName().name()).collect(Collectors.toList()) : java.util.Collections.emptyList())

@@ -40,6 +40,9 @@ public class AdminControllerTest {
     private AdminService adminService;
 
     @MockBean
+    private com.infosys.carbonfootprint.service.ActivityLogService activityLogService;
+
+    @MockBean
     private UserDetailsServiceImpl userDetailsService;
 
     @MockBean

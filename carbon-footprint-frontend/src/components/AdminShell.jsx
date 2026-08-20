@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Activity, ClipboardList, Fuel, Layers, LayoutDashboard, Leaf, LogOut, Menu, Shield, Users, X } from 'lucide-react';
+import { Activity, BookOpen, ClipboardList, Fuel, Gauge, Layers, LayoutDashboard, Leaf, LogOut, Menu, Shield, Users, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const items = [
@@ -10,6 +10,8 @@ const items = [
   { to: '/admin/activity-types', label: 'Activity Types', icon: Activity },
   { to: '/admin/emission-factors', label: 'Emission Factors', icon: Fuel },
   { to: '/admin/activity-logs', label: 'Activity Logs', icon: ClipboardList },
+  { to: '/admin/emission-limits', label: 'Emission Limits', icon: Gauge },
+  { to: '/admin/articles', label: 'Articles', icon: BookOpen },
 ];
 
 export default function AdminShell() {

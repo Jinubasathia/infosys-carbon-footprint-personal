@@ -1,0 +1,4 @@
+package com.infosys.carbonfootprint.entity;
+import jakarta.persistence.*; import lombok.*; import org.hibernate.annotations.CreationTimestamp; import org.hibernate.annotations.UpdateTimestamp; import java.time.*;
+@Entity @Table(name="goals", uniqueConstraints=@UniqueConstraint(columnNames={"user_id","goal_month","goal_year"})) @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+public class Goal { @Id @GeneratedValue(strategy=GenerationType.IDENTITY) private Long id; @ManyToOne @JoinColumn(name="user_id",nullable=false) private User user; @Column(nullable=false) private Double targetAmount; @Column(name="goal_month",nullable=false) private Integer month; @Column(name="goal_year",nullable=false) private Integer year; @CreationTimestamp private LocalDateTime createdAt; @UpdateTimestamp private LocalDateTime updatedAt; }

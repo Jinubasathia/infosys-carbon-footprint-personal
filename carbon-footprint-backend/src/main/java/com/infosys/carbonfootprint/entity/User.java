@@ -68,6 +68,9 @@ public class User {
     @Builder.Default
     private UserStatus status = UserStatus.PENDING;
 
+    @Column(name = "profile_photo_url", length = 500)
+    private String profilePhotoUrl;
+
     @Column(name = "first_login", nullable = false)
     @Builder.Default
     private boolean firstLogin = true;

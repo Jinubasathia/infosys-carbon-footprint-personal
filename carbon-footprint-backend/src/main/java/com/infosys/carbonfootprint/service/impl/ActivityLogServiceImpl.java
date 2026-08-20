@@ -6,6 +6,8 @@ import com.infosys.carbonfootprint.exception.ResourceNotFoundException;
 import com.infosys.carbonfootprint.exception.ValidationException;
 import com.infosys.carbonfootprint.repository.*;
 import com.infosys.carbonfootprint.service.ActivityLogService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,11 +19,14 @@ import java.util.stream.Collectors;
 @Service
 public class ActivityLogServiceImpl implements ActivityLogService {
 
+    private static final Logger logger = LoggerFactory.getLogger(ActivityLogServiceImpl.class);
+
     @Autowired private ActivityLogRepository activityLogRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private CategoryRepository categoryRepository;
     @Autowired private ActivityTypeRepository activityTypeRepository;
     @Autowired private EmissionFactorRepository emissionFactorRepository;
+    @Autowired private com.infosys.carbonfootprint.service.EmissionAlertGenerationService emissionAlertGenerationService;
 
     @Override
     @Transactional
@@ -35,6 +40,9 @@ public class ActivityLogServiceImpl implements ActivityLogService {
 
         validateSelectable(category, activityType);
         validateQuantity(dto.getQuantity(), activityType);
+
+        logger.debug("Looking up emission factor: activityTypeId={}, activityDate={}",
+                activityType.getActivityTypeId(), dto.getActivityDate());
 
         EmissionFactor ef = emissionFactorRepository
                 .findActiveFactorForDate(activityType.getActivityTypeId(), dto.getActivityDate())
@@ -56,7 +64,9 @@ public class ActivityLogServiceImpl implements ActivityLogService {
                 .notes(dto.getNotes())
                 .build();
 
-        return toDto(activityLogRepository.save(log));
+        ActivityLog saved = activityLogRepository.save(log);
+        emissionAlertGenerationService.checkAfterActivity(userId, category.getCategoryId(), dto.getActivityDate());
+        return toDto(saved);
     }
 
     @Override
@@ -109,7 +119,9 @@ public class ActivityLogServiceImpl implements ActivityLogService {
         log.setActivityDate(dto.getActivityDate());
         log.setNotes(dto.getNotes());
 
-        return toDto(activityLogRepository.save(log));
+        ActivityLog saved = activityLogRepository.save(log);
+        emissionAlertGenerationService.checkAfterActivity(userId, category.getCategoryId(), dto.getActivityDate());
+        return toDto(saved);
     }
 
     @Override
